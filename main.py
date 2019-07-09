@@ -1,46 +1,52 @@
-import tkinter as tk
+#'''
+from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
 from subprocess import check_output
 
 class Application(ttk.Frame):
     def __init__(self, master=None):
-        super().__init__(master)
-        self.pack()
+        super().__init__(master, padding=(3,3,12,12))
         self.create_widgets()
 
     def create_widgets(self):
-        # seta label
-        self.labelMsg = ttk.Label(self)
-        self.labelMsg["text"] = "Ola"
-        self.labelMsg.pack()
-        
-        # seta o botão com uma ação
-        self.hi_there = ttk.Button(self)
-        self.hi_there["text"] = "Selecione uma pasta"
-        self.hi_there["command"] = self.selecionar_pasta
-        self.hi_there.pack(side="top")
+        namelbl = ttk.Label(self, text="Name")
+        name = ttk.Entry(self)
+        self.frame = ttk.Frame(self, borderwidth=5, relief="sunken", width=200, height=100)
 
-        # seta o botão de sair // usando o TTK
-        self.quit = ttk.Button(self, text="QUIT",
-                              command=self.master.destroy)
-        self.quit.pack(side="bottom")
+        #onevar = BooleanVar()
+        #twovar = BooleanVar()
+        #threevar = BooleanVar()
 
-        # seta o tamanho da tela // master é uma variável da class pai Frame, que corresponde o objeto Tk()
-        self.master.geometry("800x800")
+        #onevar.set(True)
+        #twovar.set(False)
+        #threevar.set(True)
 
-        # seta o select
-        var = tk.StringVar()
-        var.set("Selecione") # Valor inicial
-        option = ttk.OptionMenu(self, var, "one", "two", "three", "four")
-        option.pack(side="left")
+        #one = ttk.Checkbutton(self, text="One", variable=onevar, onvalue=True)
+        #two = ttk.Checkbutton(self, text="Two", variable=twovar, onvalue=True)
+        #three = ttk.Checkbutton(self, text="Three", variable=threevar, onvalue=True)
+        sel_repositorio = ttk.Button(self, text="Selecionar repositório", command=self.selecionar_pasta)
+        cancel = ttk.Button(self, text="Cancel")
 
-        ttk.Style().configure("TButton", padding=6, relief="flat",
-        background="#ccc")
+        self.grid(column=0, row=0, sticky=(N, S, E, W))
+        self.frame.grid(column=2, row=0, columnspan=3, rowspan=2, sticky=(N, S, E, W))
+        namelbl.grid(column=0, row=0, columnspan=2, sticky=(N, W), padx=5)
+        name.grid(column=0, row=1, columnspan=2, sticky=(N, E, W), pady=5, padx=5)
+        #one.grid(column=0, row=3)
+        #two.grid(column=1, row=3)
+        #three.grid(column=2, row=3)
+        sel_repositorio.grid(column=0, row=3)
+        cancel.grid(column=1, row=3)
 
-        ttk.Style().configure("TOptionMenu", padding=6, relief="flat",
-        background="#ccc")
-
+        root.columnconfigure(0, weight=1)
+        root.rowconfigure(0, weight=1)
+        self.columnconfigure(0, weight=3)
+        self.columnconfigure(1, weight=3)
+        self.columnconfigure(2, weight=3)
+        self.columnconfigure(3, weight=1)
+        self.columnconfigure(4, weight=1)
+        self.rowconfigure(1, weight=1)
+                
     # imprime a versão do git
     def git_version(self):
         print(check_output("git --version", shell=True))
@@ -51,23 +57,76 @@ class Application(ttk.Frame):
         print(directory)
         #filedialog.askopenfilename(initialdir = "/",title = "Select file",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
 
-root = tk.Tk()
+root = Tk()
 app = Application(master=root)
 app.mainloop()
+#'''
 
-#from tkinter import ttk
-#import tkinter
+###############################################
 
-#root = tkinter.Tk()
+'''
+from tkinter import ttk
+import tkinter
 
-#ttk.Style().configure("TButton", padding=6, relief="flat",
- #  background="#ccc")
+root = tkinter.Tk()
 
-#btn = tkinter.Button(text="Sample")
-#btn.pack()
+ttk.Style().configure("TButton", padding=6, relief="flat",
+   background="#ccc")
 
-#btn = ttk.Button(text="Sample2")
-#btn.pack()
+btn = tkinter.Button(text="Sample")
+btn.pack()
 
-#root.mainloop()
+btn = ttk.Button(text="Sample2")
+btn.pack()
 
+root.mainloop()
+'''
+
+################################################
+
+'''
+from tkinter import *
+from tkinter import ttk
+
+root = Tk()
+
+content = ttk.Frame(root, padding=(3,3,12,12))
+frame = ttk.Frame(content, borderwidth=5, relief="sunken", width=200, height=100)
+namelbl = ttk.Label(content, text="Name")
+name = ttk.Entry(content)
+
+onevar = BooleanVar()
+twovar = BooleanVar()
+threevar = BooleanVar()
+
+onevar.set(True)
+twovar.set(False)
+threevar.set(True)
+
+one = ttk.Checkbutton(content, text="One", variable=onevar, onvalue=True)
+two = ttk.Checkbutton(content, text="Two", variable=twovar, onvalue=True)
+three = ttk.Checkbutton(content, text="Three", variable=threevar, onvalue=True)
+ok = ttk.Button(content, text="Okay")
+cancel = ttk.Button(content, text="Cancel")
+
+content.grid(column=0, row=0, sticky=(N, S, E, W))
+frame.grid(column=0, row=0, columnspan=3, rowspan=2, sticky=(N, S, E, W))
+namelbl.grid(column=3, row=0, columnspan=2, sticky=(N, W), padx=5)
+name.grid(column=3, row=1, columnspan=2, sticky=(N, E, W), pady=5, padx=5)
+one.grid(column=0, row=3)
+two.grid(column=1, row=3)
+three.grid(column=2, row=3)
+ok.grid(column=3, row=3)
+cancel.grid(column=4, row=3)
+
+root.columnconfigure(0, weight=1)
+root.rowconfigure(0, weight=1)
+content.columnconfigure(0, weight=3)
+content.columnconfigure(1, weight=3)
+content.columnconfigure(2, weight=3)
+content.columnconfigure(3, weight=1)
+content.columnconfigure(4, weight=1)
+content.rowconfigure(1, weight=1)
+
+root.mainloop()
+'''
