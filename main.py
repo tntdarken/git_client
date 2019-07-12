@@ -3,21 +3,25 @@ from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
 from subprocess import check_output
+from sys import platform
 
 class Application(ttk.Frame):
     def __init__(self, master=None):
         super().__init__(master, padding=(3,3,12,12))
         self.endRepo = ""
+        root.geometry('800x600')
         
         #Configuração dos estilos
         s = ttk.Style()
+        if platform == "darwin": # necessário para o mac, para sair do tema aqua
+            s.theme_use('default')
         s.configure('Myy.TFrame', background='blue')
         s.configure('My.TFrame', background='red')
 
         #Criação dos objetos
-        f1 = ttk.Frame(root, style='My.TFrame', width=10, height=100)
+        f1 = ttk.Frame(root, style='My.TFrame', width=0, height=0)
         f1.grid(row=0, column=0, sticky="nsew")
-        f2 = ttk.Frame(root,style='Myy.TFrame', width=10, height=100)
+        f2 = ttk.Frame(root,style='Myy.TFrame', width=0, height=0)
         f2.grid(row=0, column=1, sticky=(N,S,E,W))
 
         menubar = Menu(root)
@@ -35,7 +39,8 @@ class Application(ttk.Frame):
         editmenu.add_command(label="Paste", command=self.git_version)
         menubar.add_cascade(label="Edit", menu=editmenu)
         helpmenu = Menu(menubar, tearoff=0)
-        helpmenu.add_command(label="About", command=self.printEnd)
+        helpmenu.add_command(label="Endreco", command=self.printEnd)
+        helpmenu.add_command(label="Nome", command=self.print_repo_name)
         menubar.add_cascade(label="Help", menu=helpmenu)
         # display the menu
         root.config(menu=menubar)
@@ -51,7 +56,10 @@ class Application(ttk.Frame):
     # imprime a versão do git
     def git_version(self):
         print(check_output("git --version", shell=True))
-
+        
+    def print_repo_name(self):
+        print(check_output("basename -s .git `git config --get remote.origin.url`", shell=True))
+        
     # abre o selecionador de diretórios
     def selecionar_pasta(self):
         directory = filedialog.askdirectory()
