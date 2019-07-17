@@ -1,28 +1,52 @@
-#'''
 from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
 from subprocess import check_output
 from sys import platform
+import json
 
 class Application(ttk.Frame):
     def __init__(self, master=None):
         super().__init__(master, padding=(3,3,12,12))
         self.endRepo = ""
+        self.config = {
+            "currentRepo": ""
+        }
+        
         root.geometry('800x600')
         
         #Configuração dos estilos
         s = ttk.Style()
         if platform == "darwin": # necessário para o mac, para sair do tema aqua
             s.theme_use('default')
-        s.configure('Myy.TFrame', background='blue')
-        s.configure('My.TFrame', background='red')
-
+        s.configure('Left.TFrame', background='grey')
+        s.configure('Middle.TFrame', background='white')
+        s.configure('Right.TFrame', background='grey')
+        
         #Criação dos objetos
-        f1 = ttk.Frame(root, style='My.TFrame', width=0, height=0)
-        f1.grid(row=0, column=0, sticky="nsew")
-        f2 = ttk.Frame(root,style='Myy.TFrame', width=0, height=0)
+        f1 = ttk.Frame(root, style='Left.TFrame', width=0, height=0)
+        f1.grid(row=0, column=0, sticky=(N,S,E,W))
+        f2 = ttk.Frame(root,style='Middle.TFrame', width=0, height=0)
         f2.grid(row=0, column=1, sticky=(N,S,E,W))
+        f3 = ttk.Frame(root,style='Right.TFrame', width=0, height=0)
+        f3.grid(row=0, column=2, sticky=(N,S,E,W))
+        
+        self.tree = ttk.Treeview(f2)
+        self.tree.bind("<Button-1>", self.onselect)
+#         self.tree.bind("<<TreeviewSelect>>", self.onselectt)
+        self.tree.grid(row=0, column=0, sticky=(N,S,E,W))
+        self.showCommits()
+#         people = {1: {'name': 'John', 'age': '27', 'sex': 'Male'},
+#           2: {'name': 'Marie', 'age': '22', 'sex': 'Female'}}
+#         for p_id, p_info in people.items():
+#             print("\nPerson ID:", p_id)
+#             
+#             for key in p_info:
+#                 print(key + ':', p_info[key])
+        self.treeFiles = ttk.Treeview(f3)
+        self.treeFiles.bind("<Button-1>", self.onselectFile)
+#         self.tree.bind("<<TreeviewSelect>>", self.onselectt)
+        self.treeFiles.grid(row=0, column=0, sticky=(N,S,E,W))
 
         menubar = Menu(root)
         # create a pulldown menu, and add it to the menu bar
@@ -39,105 +63,99 @@ class Application(ttk.Frame):
         editmenu.add_command(label="Paste", command=self.git_version)
         menubar.add_cascade(label="Edit", menu=editmenu)
         helpmenu = Menu(menubar, tearoff=0)
-        helpmenu.add_command(label="Endreco", command=self.printEnd)
-        helpmenu.add_command(label="Nome", command=self.print_repo_name)
+        helpmenu.add_command(label="Mostrar Conteudo Commit", command=self.showCommitFiles)
+        helpmenu.add_command(label="Mostrar nome repo", command=self.printRepoName)
+        helpmenu.add_command(label="Abrir arquivo", command=self.readConfig)
+        helpmenu.add_command(label="Escrever no arquivo", command=self.writeConfig)
         menubar.add_cascade(label="Help", menu=helpmenu)
         # display the menu
         root.config(menu=menubar)
 
         #Configuração da expansão dos elementos (se expande para ocupar a tela ou não)
         root.columnconfigure(0, weight=1)
-        root.columnconfigure(1, weight=1)
+        root.columnconfigure(1, weight=2)
+        root.columnconfigure(2, weight=1)
         root.rowconfigure(0, weight=1)
+        f2.columnconfigure(0, weight=1)
+        f2.rowconfigure(0, weight=1)
 
     def onExit(self):
         self.quit()
         
+    def onselect(self, evt):
+        item = self.tree.identify('item', evt.x, evt.y)
+        self.showCommitFiles(item)
+#         print('O id do item clicado é ', item, ' e o resto é ', self.tree.item(item))
+
+    def onselectFile(self, evt):
+        item = self.treeFiles.identify('item', evt.x, evt.y)
+        dados = self.treeFiles.item(item)
+        self.showFileContent(dados['values'][0],item)
+        
+    def onselectt(self, event):
+        real_coords = (self.tree.winfo_pointerx() - self.tree.winfo_rootx(),
+                       self.tree.winfo_pointery() - self.tree.winfo_rooty())
+        item = self.tree.identify('item', *real_coords)
+        print('********** tree selection event **********')
+        print('looks like this virtual event doesnt support event coordinates')
+        print('event.x: %d, event.y: %d' % (event.x, event.y))
+        print('real.x: %d, real.y: %d' % real_coords)
+        print('clicked on', self.tree.item(item)['text'])
+        print('******************************************\n')
+        
     # imprime a versão do git
     def git_version(self):
         print(check_output("git --version", shell=True))
-        
-    def print_repo_name(self):
+    
+    def printRepoName(self):
         print(check_output("basename -s .git `git config --get remote.origin.url`", shell=True))
         
     # abre o selecionador de diretórios
     def selecionar_pasta(self):
         directory = filedialog.askdirectory()
-        self.endRepo = directory
-        #filedialog.askopenfilename(initialdir = "/",title = "Select file",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
+        self.config['currentRepo'] = directory
+        self.writeFile()
 
-    def printEnd(self):
-        print(self.endRepo)
+    def showCommits(self):
+        log = str(check_output('git log --pretty=format:"%h, %an, %ar, %s" ', shell=True))
+        for msg in log.split('\\n'):
+            commit = msg.split(', ')
+            self.tree.insert("", 'end', commit[0], text=commit[1]+ " -> "+commit[3], values=(""))
+        
+    def readConfig(self):
+        f = open('config', 'r')
+        for line in f:
+            self.config = json.loads(line)
+        f.close()
+    
+    def writeConfig(self):
+        f = open('config', 'w')
+        f.seek(0,2)
+        f.write(json.dumps(self.config))
+        f.close()
+        
+    def showCommitFiles(self, commit):
+        commit = commit.replace('\'', '')
+        commit = commit.replace('b', '')
+        self.treeFiles.delete(*self.treeFiles.get_children())
+        log = str(check_output('git diff --name-only '+commit, shell=True))
+        log = log.replace('b\'', '')
+        log = log.replace('\'', '')
+        for msg in log.split('\\n'):
+            co = msg.split(', ')
+            if(co[0] != ''):
+                self.treeFiles.insert("", 'end', co[0], text=co[0], values=(commit))
+
+
+    def showFileContent(self, commit, file):
+#         log = str(check_output('git diff '+commit+'~ '+commit, shell=True))
+        log = str(check_output('git diff '+commit+' -- '+file, shell=True))
+        # criar uma nova tela
+        newwin = Toplevel(root)
+        for msg in log.split('\\n'):
+            display = Label(newwin, text=msg)
+            display.pack() 
+            
 root = Tk()
 app = Application(master=root)
 app.mainloop()
-#'''
-
-###############################################
-
-'''
-from tkinter import ttk
-import tkinter
-
-root = tkinter.Tk()
-
-ttk.Style().configure("TButton", padding=6, relief="flat",
-   background="#ccc")
-
-btn = tkinter.Button(text="Sample")
-btn.pack()
-
-btn = ttk.Button(text="Sample2")
-btn.pack()
-
-root.mainloop()
-'''
-
-################################################
-
-'''
-from tkinter import *
-from tkinter import ttk
-
-root = Tk()
-
-content = ttk.Frame(root, padding=(3,3,12,12))
-frame = ttk.Frame(content, borderwidth=5, relief="sunken", width=200, height=100)
-namelbl = ttk.Label(content, text="Name")
-name = ttk.Entry(content)
-
-onevar = BooleanVar()
-twovar = BooleanVar()
-threevar = BooleanVar()
-
-onevar.set(True)
-twovar.set(False)
-threevar.set(True)
-
-one = ttk.Checkbutton(content, text="One", variable=onevar, onvalue=True)
-two = ttk.Checkbutton(content, text="Two", variable=twovar, onvalue=True)
-three = ttk.Checkbutton(content, text="Three", variable=threevar, onvalue=True)
-ok = ttk.Button(content, text="Okay")
-cancel = ttk.Button(content, text="Cancel")
-
-content.grid(column=0, row=0, sticky=(N, S, E, W))
-frame.grid(column=0, row=0, columnspan=3, rowspan=2, sticky=(N, S, E, W))
-namelbl.grid(column=3, row=0, columnspan=2, sticky=(N, W), padx=5)
-name.grid(column=3, row=1, columnspan=2, sticky=(N, E, W), pady=5, padx=5)
-one.grid(column=0, row=3)
-two.grid(column=1, row=3)
-three.grid(column=2, row=3)
-ok.grid(column=3, row=3)
-cancel.grid(column=4, row=3)
-
-root.columnconfigure(0, weight=1)
-root.rowconfigure(0, weight=1)
-content.columnconfigure(0, weight=3)
-content.columnconfigure(1, weight=3)
-content.columnconfigure(2, weight=3)
-content.columnconfigure(3, weight=1)
-content.columnconfigure(4, weight=1)
-content.rowconfigure(1, weight=1)
-
-root.mainloop()
-'''
