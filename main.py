@@ -13,6 +13,8 @@ class Application(ttk.Frame):
             "currentRepo": ""
         }
         
+        self.readConfig()
+        
         root.geometry('800x600')
         
         #Configuração dos estilos
@@ -33,6 +35,7 @@ class Application(ttk.Frame):
         
         self.tree = ttk.Treeview(f2)
         self.tree.bind("<Button-1>", self.onselect)
+        self.tree.bind("<B1-Motion>", self.motion)
 #         self.tree.bind("<<TreeviewSelect>>", self.onselectt)
         self.tree.grid(row=0, column=0, sticky=(N,S,E,W))
         self.showCommits()
@@ -82,9 +85,12 @@ class Application(ttk.Frame):
     def onExit(self):
         self.quit()
         
+    def motion(self, evt):
+        print(evt)
+        
     def onselect(self, evt):
         item = self.tree.identify('item', evt.x, evt.y)
-        self.showCommitFiles(item)
+        self.showCommitFiles(self.tree.item(item), item)
 #         print('O id do item clicado é ', item, ' e o resto é ', self.tree.item(item))
 
     def onselectFile(self, evt):
@@ -114,13 +120,16 @@ class Application(ttk.Frame):
     def selecionar_pasta(self):
         directory = filedialog.askdirectory()
         self.config['currentRepo'] = directory
-        self.writeFile()
+        self.writeConfig()
 
     def showCommits(self):
-        log = str(check_output('git log --pretty=format:"%h, %an, %ar, %s" ', shell=True))
-        for msg in log.split('\\n'):
+        log = str(check_output('git log --pretty=format:"-* %h, %an, %ar, %s," --name-status -10', shell=True))
+# --git-dir '+self.config['currentRepo']+'/.git
+        for msg in log.replace('b\'-* ', '').split('-* '):
             commit = msg.split(', ')
-            self.tree.insert("", 'end', commit[0], text=commit[1]+ " -> "+commit[3], values=(""))
+            files = commit[3].split(',')
+            files = files[1].replace('\\n','').replace('A\\t','-').replace('M\\t','-').replace('-','', 1).replace('\'', '').split('-')
+            self.tree.insert("", 'end', commit[0], text=commit[1]+ " -> "+commit[3].split(',')[0], values=(files))
         
     def readConfig(self):
         f = open('config', 'r')
@@ -134,17 +143,11 @@ class Application(ttk.Frame):
         f.write(json.dumps(self.config))
         f.close()
         
-    def showCommitFiles(self, commit):
-        commit = commit.replace('\'', '')
-        commit = commit.replace('b', '')
+    def showCommitFiles(self, commit, id):
         self.treeFiles.delete(*self.treeFiles.get_children())
-        log = str(check_output('git diff --name-only '+commit, shell=True))
-        log = log.replace('b\'', '')
-        log = log.replace('\'', '')
-        for msg in log.split('\\n'):
-            co = msg.split(', ')
-            if(co[0] != ''):
-                self.treeFiles.insert("", 'end', co[0], text=co[0], values=(commit))
+#         log = str(check_output('git --git-dir '+self.config['currentRepo']+'/.git diff --name-only '+commit, shell=True))
+        for file in commit['values']:
+            self.treeFiles.insert("", 'end', file, text=file, values=(id))
 
 
     def showFileContent(self, commit, file):
