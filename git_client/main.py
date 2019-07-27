@@ -140,17 +140,17 @@ class Application(ttk.Frame):
 
     def showCommits(self):
         self.tree.delete(*self.tree.get_children())
-        log = str(check_output('git --git-dir='+self.config['currentRepo']+'/.git log --pretty=format:"-* %h, %an, %ar, %s," --name-status -10', shell=True))
+        log = str(check_output('git --git-dir='+self.config['currentRepo']+'/.git show --pretty=format:"-* %h.,. %an.,. %ar.,. %s.,. " --name-status -10', shell=True))
         log_ = None
         if log.find('b\'-* ') == 0:
             log_ = log.replace('b\'-* ', '')
         else:
             log_ = log.replace('b"-* ', '')
         for msg in log_.split('-* '):
-            commit = msg.split(', ')
-            print(log)
-            files = commit[3].split(',')
-            files = files[1].replace('\\n','').replace('A\\t','-').replace('M\\t','-').replace('-','', 1).replace('\'', '').split('-')
+            commit = msg.split('.,. ')
+            files = commit[4]
+            if len(files) > 1:
+                files = files.replace('\\n','').replace('\\n\\n','').replace('\\nA','').replace('\\nM','').replace('\\nMM','').replace('A\\t','-').replace('MM\\t','-').replace('M\\t','-').replace('\\t','-').replace('-','', 1).replace('\'', '').replace('"', '').split('-')
             self.tree.insert("", 'end', commit[0], text=commit[1]+ " -> "+commit[3].split(',')[0], values=(files))
         
     def readConfig(self):
@@ -167,11 +167,10 @@ class Application(ttk.Frame):
         
     def showCommitFiles(self, commit, id):
         self.treeFiles.delete(*self.treeFiles.get_children())
-#         log = str(check_output('git --git-dir '+self.config['currentRepo']+'/.git diff --name-only '+commit, shell=True))
         for file in commit['values']:
             self.treeFiles.insert("", 'end', file, text=file, values=(id))
 
 
     def showFileContent(self, commit, file):
-        log = str(check_output('git diff '+commit+' -- '+file, shell=True))
+        log = str(check_output('git --git-dir='+self.config['currentRepo']+'/.git diff '+commit+' -- '+file, shell=True))
         exibir_arquivo.teste(log)
