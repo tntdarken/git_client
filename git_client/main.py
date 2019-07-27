@@ -3,6 +3,7 @@ from tkinter import ttk
 from tkinter import filedialog
 from subprocess import check_output
 from sys import platform
+from EditorArquivos import exibir_arquivo
 import json
 
 class Application(ttk.Frame):
@@ -15,7 +16,7 @@ class Application(ttk.Frame):
         
         self.readConfig()
         
-        root.geometry('800x600')
+        self.master.geometry('800x600')
         
         #Configuração dos estilos
         s = ttk.Style()
@@ -24,18 +25,24 @@ class Application(ttk.Frame):
         s.configure('Left.TFrame', background='grey')
         s.configure('Middle.TFrame', background='white')
         s.configure('Right.TFrame', background='grey')
+        s.configure('Hover.Label', background='white')
         
         #Criação dos objetos
-        f1 = ttk.Frame(root, style='Left.TFrame', width=0, height=0)
+        f1 = ttk.Frame(self.master, style='Left.TFrame', width=0, height=0)
         f1.grid(row=0, column=0, sticky=(N,S,E,W))
-        f2 = ttk.Frame(root,style='Middle.TFrame', width=0, height=0)
+        f2 = ttk.Frame(self.master,style='Middle.TFrame', width=0, height=0)
         f2.grid(row=0, column=1, sticky=(N,S,E,W))
-        f3 = ttk.Frame(root,style='Right.TFrame', width=0, height=0)
+        f3 = ttk.Frame(self.master,style='Right.TFrame', width=0, height=0)
         f3.grid(row=0, column=2, sticky=(N,S,E,W))
+        
+        self.l2 = ttk.Label(text="asdfasdf", width=40, style='Hover.Label')
+        self.l2.place(x=200, y=200)
+        self.l2.lower()
         
         self.tree = ttk.Treeview(f2)
         self.tree.bind("<Button-1>", self.onselect)
         self.tree.bind("<B1-Motion>", self.motion)
+        self.tree.bind("<ButtonRelease-1>", self.stopMotion)
 #         self.tree.bind("<<TreeviewSelect>>", self.onselectt)
         self.tree.grid(row=0, column=0, sticky=(N,S,E,W))
         self.showCommits()
@@ -51,13 +58,13 @@ class Application(ttk.Frame):
 #         self.tree.bind("<<TreeviewSelect>>", self.onselectt)
         self.treeFiles.grid(row=0, column=0, sticky=(N,S,E,W))
 
-        menubar = Menu(root)
+        menubar = Menu(self.master)
         # create a pulldown menu, and add it to the menu bar
         filemenu = Menu(menubar, tearoff=0)
         filemenu.add_command(label="Open", command=self.selecionar_pasta)
         filemenu.add_command(label="Save", command=self.git_version)
         filemenu.add_separator()
-        filemenu.add_command(label="Exit", command=root.quit)
+        filemenu.add_command(label="Exit", command=self.master.quit)
         menubar.add_cascade(label="File", menu=filemenu)
         # create more pulldown menus
         editmenu = Menu(menubar, tearoff=0)
@@ -72,13 +79,13 @@ class Application(ttk.Frame):
         helpmenu.add_command(label="Escrever no arquivo", command=self.writeConfig)
         menubar.add_cascade(label="Help", menu=helpmenu)
         # display the menu
-        root.config(menu=menubar)
+        self.master.config(menu=menubar)
 
         #Configuração da expansão dos elementos (se expande para ocupar a tela ou não)
-        root.columnconfigure(0, weight=1)
-        root.columnconfigure(1, weight=2)
-        root.columnconfigure(2, weight=1)
-        root.rowconfigure(0, weight=1)
+        self.master.columnconfigure(0, weight=1)
+        self.master.columnconfigure(1, weight=2)
+        self.master.columnconfigure(2, weight=1)
+        self.master.rowconfigure(0, weight=1)
         f2.columnconfigure(0, weight=1)
         f2.rowconfigure(0, weight=1)
 
@@ -86,6 +93,14 @@ class Application(ttk.Frame):
         self.quit()
         
     def motion(self, evt):
+        item = self.tree.identify('item', evt.x, evt.y)
+        self.l2.lift()
+        self.l2.place(x=evt.x, y=evt.y)
+        self.l2['text'] = item
+        print(evt)
+        
+    def stopMotion(self, evt):
+        self.l2.lower()
         print(evt)
         
     def onselect(self, evt):
@@ -121,24 +136,31 @@ class Application(ttk.Frame):
         directory = filedialog.askdirectory()
         self.config['currentRepo'] = directory
         self.writeConfig()
+        self.showCommits()
 
     def showCommits(self):
-        log = str(check_output('git log --pretty=format:"-* %h, %an, %ar, %s," --name-status -10', shell=True))
-# --git-dir '+self.config['currentRepo']+'/.git
-        for msg in log.replace('b\'-* ', '').split('-* '):
+        self.tree.delete(*self.tree.get_children())
+        log = str(check_output('git --git-dir='+self.config['currentRepo']+'/.git log --pretty=format:"-* %h, %an, %ar, %s," --name-status -10', shell=True))
+        log_ = None
+        if log.find('b\'-* ') == 0:
+            log_ = log.replace('b\'-* ', '')
+        else:
+            log_ = log.replace('b"-* ', '')
+        for msg in log_.split('-* '):
             commit = msg.split(', ')
+            print(log)
             files = commit[3].split(',')
             files = files[1].replace('\\n','').replace('A\\t','-').replace('M\\t','-').replace('-','', 1).replace('\'', '').split('-')
             self.tree.insert("", 'end', commit[0], text=commit[1]+ " -> "+commit[3].split(',')[0], values=(files))
         
     def readConfig(self):
-        f = open('config', 'r')
+        f = open('src/config', 'r')
         for line in f:
             self.config = json.loads(line)
         f.close()
     
     def writeConfig(self):
-        f = open('config', 'w')
+        f = open('src/config', 'w')
         f.seek(0,2)
         f.write(json.dumps(self.config))
         f.close()
@@ -151,14 +173,5 @@ class Application(ttk.Frame):
 
 
     def showFileContent(self, commit, file):
-#         log = str(check_output('git diff '+commit+'~ '+commit, shell=True))
         log = str(check_output('git diff '+commit+' -- '+file, shell=True))
-        # criar uma nova tela
-        newwin = Toplevel(root)
-        for msg in log.split('\\n'):
-            display = Label(newwin, text=msg)
-            display.pack() 
-            
-root = Tk()
-app = Application(master=root)
-app.mainloop()
+        exibir_arquivo.teste(log)
